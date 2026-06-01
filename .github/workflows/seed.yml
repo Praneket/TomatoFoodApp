@@ -1,0 +1,72 @@
+name: Seed Database
+
+on:
+  workflow_dispatch:
+    inputs:
+      step:
+        description: 'Which step to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - mongo-only
+          - users-only
+          - roles-only
+
+jobs:
+  seed:
+    name: Seed MongoDB + Users + Roles
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ── Step 1: Seed MongoDB (restaurants + food catalog) ──────────────
+      - name: Install script dependencies
+        if: ${{ inputs.step == 'all' || inputs.step == 'mongo-only' }}
+        working-directory: scripts
+        run: npm install
+
+      - name: Seed MongoDB (restaurants + food items)
+        if: ${{ inputs.step == 'all' || inputs.step == 'mongo-only' }}
+        working-directory: scripts
+        run: node seed.js
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+
+      # ── Step 2: Create user accounts via live API ───────────────────────
+      - name: Create user accounts via API
+        if: ${{ inputs.step == 'all' || inputs.step == 'users-only' }}
+        working-directory: scripts
+        run: node seed-users.js
+        env:
+          API_URL: ${{ secrets.API_URL }}
+
+      # ── Step 3: Set roles in PostgreSQL via Prisma ─────────────────────
+      - name: Install auth-service deps + generate Prisma client
+        if: ${{ inputs.step == 'all' || inputs.step == 'roles-only' }}
+        working-directory: services/auth-service
+        run: npm install && npx prisma generate
+
+      - name: Set user roles in PostgreSQL
+        if: ${{ inputs.step == 'all' || inputs.step == 'roles-only' }}
+        working-directory: scripts
+        run: node seed-roles.js
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      # ── Summary ────────────────────────────────────────────────────────
+      - name: Done
+        run: |
+          echo "✅ Seed complete!"
+          echo ""
+          echo "Test accounts:"
+          echo "  customer@tomato.com  / Password123!"
+          echo "  admin@tomato.com     / Admin123!"
+          echo "  owner@tomato.com     / Owner123!"
+          echo "  delivery@tomato.com  / Delivery123!"
