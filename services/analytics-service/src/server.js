@@ -32,8 +32,9 @@ app.get('/api/analytics/customer/:userId',            auth(['admin', 'super_admi
 app.get('/health', (req, res) => res.json({ status: 'healthy', service: 'analytics-service' }));
 app.use((err, req, res, next) => res.status(500).json({ success: false, error: { message: err.message } }));
 
+app.listen(PORT, () => console.log(`Analytics Service running on port ${PORT}`));
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/tomato_analytics')
-  .then(() => app.listen(PORT, () => console.log(`Analytics Service running on port ${PORT}`)))
-  .catch((err) => { console.error(err); process.exit(1); });
+  .then(() => console.log('MongoDB connected (analytics-service)'))
+  .catch((err) => console.error('MongoDB connection failed:', err.message));
 
 module.exports = app;

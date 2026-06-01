@@ -32,8 +32,12 @@ app.use((err, req, res, next) => {
   res.status(err.statusCode || 500).json({ success: false, error: { message: err.message || 'Internal server error' } });
 });
 
+// Start HTTP server immediately — don't wait for MongoDB
+app.listen(PORT, () => console.log(`Restaurant Service running on port ${PORT}`));
+
+// Connect MongoDB in background
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/tomato_restaurants')
-  .then(() => app.listen(PORT, () => console.log(`Restaurant Service running on port ${PORT}`)))
-  .catch((err) => { console.error(err); process.exit(1); });
+  .then(() => console.log('MongoDB connected (restaurant-service)'))
+  .catch((err) => console.error('MongoDB connection failed:', err.message));
 
 module.exports = app;

@@ -127,8 +127,9 @@ app.get('/api/users/favorites', auth, wrap(async (req, res) => {
 app.get('/health', (req, res) => res.json({ status: 'healthy', service: 'user-service' }));
 app.use((err, req, res, next) => res.status(500).json({ success: false, error: { message: err.message } }));
 
+app.listen(PORT, () => console.log(`User Service running on port ${PORT}`));
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/tomato_users')
-  .then(() => app.listen(PORT, () => console.log(`User Service running on port ${PORT}`)))
-  .catch((err) => { console.error(err); process.exit(1); });
+  .then(() => console.log('MongoDB connected (user-service)'))
+  .catch((err) => console.error('MongoDB connection failed:', err.message));
 
 module.exports = app;

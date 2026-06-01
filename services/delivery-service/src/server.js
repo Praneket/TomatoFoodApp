@@ -20,8 +20,9 @@ app.use((err, req, res, next) => {
   res.status(err.statusCode || 500).json({ success: false, error: { message: err.message || 'Internal server error' } });
 });
 
+app.listen(PORT, () => console.log(`Delivery Service running on port ${PORT}`));
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/tomato_delivery')
-  .then(() => app.listen(PORT, () => console.log(`Delivery Service running on port ${PORT}`)))
-  .catch((err) => { console.error(err); process.exit(1); });
+  .then(() => console.log('MongoDB connected (delivery-service)'))
+  .catch((err) => console.error('MongoDB connection failed:', err.message));
 
 module.exports = app;

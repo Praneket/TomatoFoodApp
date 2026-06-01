@@ -59,13 +59,10 @@ app.use('/api/orders', orderRoutes);
 app.get('/health', (req, res) => res.json({ status: 'healthy', service: 'order-service' }));
 app.use(errorHandler);
 
-// DB + Start
+// Start server immediately, connect DB + consumer in background
+server.listen(PORT, () => console.log(`Order Service running on port ${PORT}`));
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/tomato_orders')
-  .then(() => {
-    console.log('MongoDB connected');
-    startConsumer();
-    server.listen(PORT, () => console.log(`Order Service running on port ${PORT}`));
-  })
-  .catch((err) => { console.error('MongoDB connection failed:', err); process.exit(1); });
+  .then(() => { console.log('MongoDB connected (order-service)'); startConsumer(); })
+  .catch((err) => console.error('MongoDB connection failed:', err.message));
 
 module.exports = { app, server };
