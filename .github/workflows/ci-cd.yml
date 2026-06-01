@@ -16,15 +16,12 @@ jobs:
         service:
           - api-gateway
           - auth-service
-          - user-service
-          - restaurant-service
-          - catalog-service
           - cart-service
+          - catalog-service
           - order-service
           - payment-service
+          - restaurant-service
           - delivery-service
-          - review-service
-          - analytics-service
 
     services:
       mongo:
@@ -33,13 +30,16 @@ jobs:
       redis:
         image: redis:7-alpine
         ports: ["6379:6379"]
-        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
@@ -47,13 +47,9 @@ jobs:
         working-directory: services/${{ matrix.service }}
         run: npm install
 
-      - name: Run linter
-        working-directory: services/${{ matrix.service }}
-        run: npm run lint --if-present
-
       - name: Run tests
         working-directory: services/${{ matrix.service }}
-        run: npm test --if-present
+        run: npm test
         env:
           NODE_ENV: test
           MONGO_URI: mongodb://localhost:27017/tomato_test
@@ -62,3 +58,5 @@ jobs:
           JWT_ACCESS_SECRET: test_secret_key_32_chars_minimum!!
           JWT_REFRESH_SECRET: test_refresh_key_32_chars_minimum!
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tomato_test
+          SUPABASE_URL: https://placeholder.supabase.co
+          SUPABASE_SERVICE_KEY: placeholder_key

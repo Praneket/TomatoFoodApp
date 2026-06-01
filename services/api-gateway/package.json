@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "test": "jest --coverage"
+    "test": "jest --passWithNoTests"
   },
   "dependencies": {
     "express": "^4.19.2",

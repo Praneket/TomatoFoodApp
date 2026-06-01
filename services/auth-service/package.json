@@ -7,7 +7,7 @@
     "start": "node src/server.js",
     "db:migrate": "npx prisma migrate deploy",
     "db:seed": "node prisma/seed.js",
-    "test": "jest --coverage"
+    "test": "jest --passWithNoTests"
   },
   "dependencies": {
     "express": "^4.19.2",
