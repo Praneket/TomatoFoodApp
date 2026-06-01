@@ -16,14 +16,20 @@ app.use(express.json());
 // ============================================================
 // EMAIL SERVICE
 // ============================================================
-const transporter = nodemailer.createTransport({
+const smtpReady = process.env.SMTP_USER && process.env.SMTP_PASS
+  && !process.env.SMTP_USER.includes('your_email');
+
+const transporter = smtpReady ? nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT) || 587,
   secure: false,
   auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-});
+}) : null;
+
+if (!smtpReady) console.log('[Notification] SMTP not configured — emails will be mocked');
 
 const sendEmail = async ({ to, subject, html }) => {
+  if (!transporter) return console.log(`[EMAIL MOCK] To: ${to} | Subject: ${subject}`);
   await transporter.sendMail({ from: `"Tomato 🍅" <${process.env.SMTP_USER}>`, to, subject, html });
   console.log(`Email sent to ${to}`);
 };
@@ -31,9 +37,13 @@ const sendEmail = async ({ to, subject, html }) => {
 // ============================================================
 // SMS SERVICE (Twilio)
 // ============================================================
-const twilioClient = process.env.TWILIO_ACCOUNT_SID
-  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID;
+const twilioReady = TWILIO_SID && TWILIO_SID.startsWith('AC');
+const twilioClient = twilioReady
+  ? twilio(TWILIO_SID, process.env.TWILIO_AUTH_TOKEN)
   : null;
+
+if (!twilioReady) console.log('[Notification] Twilio not configured — SMS will be mocked');
 
 const sendSMS = async ({ to, body }) => {
   if (!twilioClient) return console.log(`[SMS MOCK] To: ${to} | ${body}`);
