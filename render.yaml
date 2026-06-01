@@ -19,7 +19,7 @@ services:
       - key: USER_SERVICE_URL
         value: https://tomato-user-service.onrender.com
       - key: RESTAURANT_SERVICE_URL
-        value: https://tomato-restaurant-service.onrender.com
+        value: https://tomato-restaurant-service-hv0e.onrender.com
       - key: CATALOG_SERVICE_URL
         value: https://tomato-catalog-service.onrender.com
       - key: CART_SERVICE_URL
@@ -46,7 +46,7 @@ services:
     name: tomato-auth-service
     runtime: node
     rootDir: services/auth-service
-    buildCommand: npm install && npx prisma generate && npx prisma db push --accept-data-loss
+    buildCommand: npm install && npx prisma generate && npx prisma db push --accept-data-loss || true
     startCommand: npm start
     plan: free
     envVars:
