@@ -1,0 +1,394 @@
+# ============================================================
+# TOMATO PLATFORM - Docker Compose (Production)
+# Run: docker compose -f infrastructure/docker/docker-compose.prod.yml up -d
+# ============================================================
+
+networks:
+  tomato-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  mongo-data:
+  redis-data:
+  rabbitmq-data:
+  prometheus-data:
+  grafana-data:
+
+services:
+
+  # ── DATABASES ──────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: tomato-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [tomato-network]
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo:
+    image: mongo:7-jammy
+    container_name: tomato-mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-rootpassword}
+    volumes:
+      - mongo-data:/data/db
+    networks: [tomato-network]
+    restart: always
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: tomato-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redis-data:/data
+    networks: [tomato-network]
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: tomato-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks: [tomato-network]
+    restart: always
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ── MICROSERVICES ──────────────────────────────────────────
+
+  api-gateway:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-tomato}/tomato-api-gateway:${TAG:-latest}
+    container_name: tomato-api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - GATEWAY_PORT=3000
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - USER_SERVICE_URL=http://user-service:3002
+      - RESTAURANT_SERVICE_URL=http://restaurant-service:3003
+      - CATALOG_SERVICE_URL=http://catalog-service:3004
+      - CART_SERVICE_URL=http://cart-service:3005
+      - ORDER_SERVICE_URL=http://order-service:3006
+      - PAYMENT_SERVICE_URL=http://payment-service:3007
+      - DELIVERY_SERVICE_URL=http://delivery-service:3008
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3009
+      - REVIEW_SERVICE_URL=http://review-service:3010
+      - ANALYTICS_SERVICE_URL=http://analytics-service:3011
+      - AI_SERVICE_URL=http://ai-service:8000
+      - CUSTOMER_APP_URL=${CUSTOMER_APP_URL}
+      - ADMIN_PANEL_URL=${ADMIN_PANEL_URL}
+      - DELIVERY_APP_URL=${DELIVERY_APP_URL}
+    depends_on:
+      - auth-service
+      - catalog-service
+    networks: [tomato-network]
+    restart: always
+
+  auth-service:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-tomato}/tomato-auth-service:${TAG:-latest}
+    container_name: tomato-auth-service
+    environment:
+      - NODE_ENV=production
+      - AUTH_SERVICE_PORT=3001
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/tomato_auth
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - JWT_ACCESS_EXPIRES=15m
+      - JWT_REFRESH_EXPIRES=7d
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672
+      - REDIS_URL=redis://redis:6379
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
+      - CUSTOMER_APP_URL=${CUSTOMER_APP_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks: [tomato-network]
+    restart: always
+
+  user-service:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-tomato}/tomato-user-service:${TAG:-latest}
+    container_name: tomato-user-service
+    environment:
+      - NODE_ENV=production
+      - USER_SERVICE_PORT=3002
+      - MONGO_URI=mongodb://${MONGO_ROOT_USER:-root}:${MONGO_ROOT_PASSWORD:-rootpassword}@mongo:27017/tomato_users?authSource=admin
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks: [tomato-network]
+    restart: always
+
+  restaurant-service:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-tomato}/tomato-restaurant-service:${TAG:-latest}
+    container_name: tomato-restaurant-service
+    environment:
+      - NODE_ENV=production
+      - RESTAURANT_SERVICE_PORT=3003
+      - MONGO_URI=mongodb://${MONGO_ROOT_USER:-root}:${MONGO_ROOT_PASSWORD:-rootpassword}@mongo:27017/tomato_restaurants?authSource=admin
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks: [tomato-network]
+    restart: always
+
+  catalog-service:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-tomato}/tomato-catalog-service:${TAG:-latest}
+    container_name: tomato-catalog-service
+    environment:
+      - NODE_ENV=production
+      - CATALOG_SERVICE_PORT=3004
+      - MONGO_URI=mongodb://${MONGO_ROOT_USER:-root}:${MONGO_ROOT_PASSWORD:-rootpassword}@mongo:27017/tomato_catalog?authSource=admin
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [tomato-network]
+    restart: always
+
+  cart-service:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-tomato}/tomato-cart-service:${TAG:-latest}
+    container_name: tomato-cart-service
+    environment:
+      - NODE_ENV=production
+      - CART_SERVICE_PORT=3005
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [tomato-network]
+    restart: always
+
+  order-service:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-tomato}/tomato-order-service:${TAG:-latest}
+    container_name: tomato-order-service
+    environment:
+      - NODE_ENV=production
+      - ORDER_SERVICE_PORT=3006
+      - MONGO_URI=mongodb://${MONGO_ROOT_USER:-root}:${MONGO_ROOT_PASSWORD:-rootpassword}@mongo:27017/tomato_orders?authSource=admin
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672
+    depends_on:
+      mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks: [tomato-network]
+    restart: always
+
+  payment-service:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-tomato}/tomato-payment-service:${TAG:-latest}
+    container_name: tomato-payment-service
+    environment:
+      - NODE_ENV=production
+      - PAYMENT_SERVICE_PORT=3007
+      - MONGO_URI=mongodb://${MONGO_ROOT_USER:-root}:${MONGO_ROOT_PASSWORD:-rootpassword}@mongo:27017/tomato_payments?authSource=admin
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+    depends_on:
+      mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks: [tomato-network]
+    restart: always
+
+  delivery-service:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-tomato}/tomato-delivery-service:${TAG:-latest}
+    container_name: tomato-delivery-service
+    environment:
+      - NODE_ENV=production
+      - DELIVERY_SERVICE_PORT=3008
+      - MONGO_URI=mongodb://${MONGO_ROOT_USER:-root}:${MONGO_ROOT_PASSWORD:-rootpassword}@mongo:27017/tomato_delivery?authSource=admin
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672
+      - REDIS_URL=redis://redis:6379
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks: [tomato-network]
+    restart: always
+
+  notification-service:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-tomato}/tomato-notification-service:${TAG:-latest}
+    container_name: tomato-notification-service
+    environment:
+      - NODE_ENV=production
+      - NOTIFICATION_SERVICE_PORT=3009
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks: [tomato-network]
+    restart: always
+
+  review-service:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-tomato}/tomato-review-service:${TAG:-latest}
+    container_name: tomato-review-service
+    environment:
+      - NODE_ENV=production
+      - REVIEW_SERVICE_PORT=3010
+      - MONGO_URI=mongodb://${MONGO_ROOT_USER:-root}:${MONGO_ROOT_PASSWORD:-rootpassword}@mongo:27017/tomato_reviews?authSource=admin
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks: [tomato-network]
+    restart: always
+
+  analytics-service:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-tomato}/tomato-analytics-service:${TAG:-latest}
+    container_name: tomato-analytics-service
+    environment:
+      - NODE_ENV=production
+      - ANALYTICS_SERVICE_PORT=3011
+      - MONGO_URI=mongodb://${MONGO_ROOT_USER:-root}:${MONGO_ROOT_PASSWORD:-rootpassword}@mongo:27017/tomato_orders?authSource=admin
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks: [tomato-network]
+    restart: always
+
+  ai-service:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-tomato}/tomato-ai-service:${TAG:-latest}
+    container_name: tomato-ai-service
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [tomato-network]
+    restart: always
+
+  # ── FRONTEND APPS ──────────────────────────────────────────
+
+  customer-app:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-tomato}/tomato-customer-app:${TAG:-latest}
+    container_name: tomato-customer-app
+    ports:
+      - "5173:80"
+    networks: [tomato-network]
+    restart: always
+
+  admin-panel:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-tomato}/tomato-admin-panel:${TAG:-latest}
+    container_name: tomato-admin-panel
+    ports:
+      - "5174:80"
+    networks: [tomato-network]
+    restart: always
+
+  delivery-app:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_PREFIX:-tomato}/tomato-delivery-app:${TAG:-latest}
+    container_name: tomato-delivery-app
+    ports:
+      - "5175:80"
+    networks: [tomato-network]
+    restart: always
+
+  # ── NGINX REVERSE PROXY ────────────────────────────────────
+
+  nginx:
+    image: nginx:alpine
+    container_name: tomato-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - api-gateway
+      - customer-app
+      - admin-panel
+      - delivery-app
+    networks: [tomato-network]
+    restart: always
+
+  # ── MONITORING ─────────────────────────────────────────────
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: tomato-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks: [tomato-network]
+    restart: always
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: tomato-grafana
+    ports:
+      - "3100:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks: [tomato-network]
+    restart: always

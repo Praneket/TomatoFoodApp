@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #ff6b35;
+  --primary-dark: #e85520;
+}
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-font-smoothing: antialiased; }
+  body { @apply font-sans bg-gray-950 text-white; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-orange-500/30 rounded-full; }
+}
+
+@layer components {
+  .card {
+    background: rgba(22, 22, 40, 0.85);
+    border: 1px solid rgba(255, 107, 53, 0.12);
+    border-radius: 16px;
+    padding: 1.25rem;
+    transition: box-shadow 0.3s ease;
+  }
+  .card:hover { box-shadow: 0 4px 24px rgba(255, 107, 53, 0.1); }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    background: linear-gradient(135deg, #ff6b35, #e85520);
+    color: white; font-weight: 600; padding: 0.625rem 1.25rem;
+    border-radius: 12px; border: none; cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+  }
+  .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .input-field {
+    width: 100%; padding: 0.625rem 1rem;
+    background: rgba(30, 30, 50, 0.8);
+    border: 1.5px solid rgba(255, 107, 53, 0.2);
+    border-radius: 10px; color: white; font-size: 0.875rem;
+    outline: none; transition: all 0.2s ease;
+  }
+  .input-field:focus { border-color: #ff6b35; box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.12); }
+  .input-field::placeholder { color: #6b7280; }
+
+  .stat-card {
+    @apply card flex flex-col gap-2;
+  }
+
+  .nav-link {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.75rem 1rem; border-radius: 12px;
+    font-size: 0.875rem; font-weight: 500;
+    color: #9ca3af; transition: all 0.2s ease;
+    text-decoration: none;
+  }
+  .nav-link:hover { color: white; background: rgba(255, 107, 53, 0.1); }
+  .nav-link.active { background: linear-gradient(135deg, rgba(255,107,53,0.2), rgba(232,85,32,0.15)); color: #ff6b35; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    padding: 0.25rem 0.625rem; border-radius: 999px;
+    font-size: 0.75rem; font-weight: 600;
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #1e1e32 25%, #252540 50%, #1e1e32 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite;
+  border-radius: 8px;
+}

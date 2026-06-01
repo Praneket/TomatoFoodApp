@@ -1,0 +1,290 @@
+services:
+  # ── API GATEWAY ──────────────────────────────────────────────
+  - type: web
+    name: tomato-api-gateway
+    runtime: node
+    rootDir: services/api-gateway
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: AUTH_SERVICE_URL
+        value: https://tomato-auth-service.onrender.com
+      - key: USER_SERVICE_URL
+        value: https://tomato-user-service.onrender.com
+      - key: RESTAURANT_SERVICE_URL
+        value: https://tomato-restaurant-service.onrender.com
+      - key: CATALOG_SERVICE_URL
+        value: https://tomato-catalog-service.onrender.com
+      - key: CART_SERVICE_URL
+        value: https://tomato-cart-service.onrender.com
+      - key: ORDER_SERVICE_URL
+        value: https://tomato-order-service.onrender.com
+      - key: PAYMENT_SERVICE_URL
+        value: https://tomato-payment-service.onrender.com
+      - key: DELIVERY_SERVICE_URL
+        value: https://tomato-delivery-service.onrender.com
+      - key: NOTIFICATION_SERVICE_URL
+        value: https://tomato-notification-service.onrender.com
+      - key: REVIEW_SERVICE_URL
+        value: https://tomato-review-service.onrender.com
+      - key: ANALYTICS_SERVICE_URL
+        value: https://tomato-analytics-service.onrender.com
+      - key: AI_SERVICE_URL
+        value: https://tomato-ai-service.onrender.com
+      - key: REDIS_URL
+        sync: false
+
+  # ── AUTH SERVICE ─────────────────────────────────────────────
+  - type: web
+    name: tomato-auth-service
+    runtime: node
+    rootDir: services/auth-service
+    buildCommand: npm install && npx prisma generate && npx prisma db push --accept-data-loss
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: JWT_ACCESS_EXPIRES
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES
+        value: 7d
+      - key: REDIS_URL
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        value: https://tomato-api-gateway.onrender.com/api/auth/google/callback
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+
+  # ── USER SERVICE ─────────────────────────────────────────────
+  - type: web
+    name: tomato-user-service
+    runtime: node
+    rootDir: services/user-service
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false
+
+  # ── RESTAURANT SERVICE ───────────────────────────────────────
+  - type: web
+    name: tomato-restaurant-service
+    runtime: node
+    rootDir: services/restaurant-service
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+
+  # ── CATALOG SERVICE ──────────────────────────────────────────
+  - type: web
+    name: tomato-catalog-service
+    runtime: node
+    rootDir: services/catalog-service
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false
+
+  # ── CART SERVICE ─────────────────────────────────────────────
+  - type: web
+    name: tomato-cart-service
+    runtime: node
+    rootDir: services/cart-service
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: REDIS_URL
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+
+  # ── ORDER SERVICE ────────────────────────────────────────────
+  - type: web
+    name: tomato-order-service
+    runtime: node
+    rootDir: services/order-service
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+
+  # ── PAYMENT SERVICE ──────────────────────────────────────────
+  - type: web
+    name: tomato-payment-service
+    runtime: node
+    rootDir: services/payment-service
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+
+  # ── DELIVERY SERVICE ─────────────────────────────────────────
+  - type: web
+    name: tomato-delivery-service
+    runtime: node
+    rootDir: services/delivery-service
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+
+  # ── NOTIFICATION SERVICE ─────────────────────────────────────
+  - type: web
+    name: tomato-notification-service
+    runtime: node
+    rootDir: services/notification-service
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: RABBITMQ_URL
+        sync: false
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+
+  # ── REVIEW SERVICE ───────────────────────────────────────────
+  - type: web
+    name: tomato-review-service
+    runtime: node
+    rootDir: services/review-service
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+
+  # ── ANALYTICS SERVICE ────────────────────────────────────────
+  - type: web
+    name: tomato-analytics-service
+    runtime: node
+    rootDir: services/analytics-service
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
