@@ -1,8 +1,8 @@
 const passport = require('passport');
 const { Strategy: GoogleStrategy } = require('passport-google-oauth20');
-const { PrismaClient } = require('@prisma/client');
+const { getPrisma } = require('../services/prismaClient');
 
-const prisma = new PrismaClient();
+const prisma = getPrisma();
 
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy(

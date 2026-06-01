@@ -1,8 +1,8 @@
 const crypto = require('crypto');
-const { PrismaClient } = require('@prisma/client');
+const { getPrisma } = require('./prismaClient');
 const nodemailer = require('nodemailer');
 
-const prisma = new PrismaClient();
+const prisma = getPrisma();
 
 const generateOtp = () => crypto.randomInt(100000, 999999).toString();
 
