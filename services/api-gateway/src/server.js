@@ -103,13 +103,18 @@ app.use(globalLimiter);
 
 // ============================================================
 // PROXY FACTORY
+// prefix = the app.use() mount path, e.g. '/api/catalog'
+// Downstream services mount their own routes at the FULL path,
+// so we must forward the full original URL, not the stripped suffix.
 // ============================================================
-const createProxy = (target) =>
+const createProxy = (target, prefix) =>
   createProxyMiddleware({
     target,
     changeOrigin: true,
-    proxyTimeout: 60000,  // 60s — allows Render free tier cold start (~30s)
+    proxyTimeout: 60000,
     timeout: 60000,
+    // Rewrite: restore the full path that was stripped by express app.use()
+    pathRewrite: (path, req) => req.originalUrl.split('?')[0] + (req.originalUrl.includes('?') ? '?' + req.originalUrl.split('?')[1] : ''),
     on: {
       error: (err, req, res) => {
         logger.error(`Proxy error to ${target}: ${err.message}`);
@@ -132,8 +137,6 @@ const createProxy = (target) =>
         }
       },
       proxyRes: (proxyRes) => {
-        // Strip any CORS headers set by downstream services
-        // so the gateway's own CORS middleware is the sole authority
         delete proxyRes.headers['access-control-allow-origin'];
         delete proxyRes.headers['access-control-allow-credentials'];
         delete proxyRes.headers['access-control-allow-methods'];
@@ -146,27 +149,26 @@ const createProxy = (target) =>
 // ============================================================
 // PUBLIC ROUTES (no auth required)
 // ============================================================
-app.use('/api/auth', authLimiter, createProxy(SERVICES.auth));
-app.use('/api/catalog', createProxy(SERVICES.catalog));
-app.use('/api/restaurants/public', createProxy(SERVICES.restaurant));
+app.use('/api/auth',               authLimiter,                                              createProxy(SERVICES.auth));
+app.use('/api/catalog',                                                                       createProxy(SERVICES.catalog));
+app.use('/api/restaurants/public',                                                            createProxy(SERVICES.restaurant));
 
 // Stripe webhook (raw body needed)
-app.use('/api/payments/webhook', express.raw({ type: 'application/json' }),
-  createProxy(SERVICES.payment));
+app.use('/api/payments/webhook',   express.raw({ type: 'application/json' }),                createProxy(SERVICES.payment));
 
 // ============================================================
 // PROTECTED ROUTES (auth required)
 // ============================================================
-app.use('/api/users',         authMiddleware(),                    createProxy(SERVICES.user));
-app.use('/api/restaurants',   authMiddleware(),                    createProxy(SERVICES.restaurant));
-app.use('/api/cart',          authMiddleware(['customer']),        createProxy(SERVICES.cart));
+app.use('/api/users',         authMiddleware(),                                               createProxy(SERVICES.user));
+app.use('/api/restaurants',   authMiddleware(),                                               createProxy(SERVICES.restaurant));
+app.use('/api/cart',          authMiddleware(['customer']),                                   createProxy(SERVICES.cart));
 app.use('/api/orders',        authMiddleware(['customer', 'restaurant_owner', 'delivery_partner', 'admin']), createProxy(SERVICES.order));
-app.use('/api/payments',      authMiddleware(), paymentLimiter,    createProxy(SERVICES.payment));
-app.use('/api/delivery',      authMiddleware(),                    createProxy(SERVICES.delivery));
-app.use('/api/notifications', authMiddleware(),                    createProxy(SERVICES.notification));
-app.use('/api/reviews',       authMiddleware(),                    createProxy(SERVICES.review));
-app.use('/api/analytics',     authMiddleware(['admin', 'super_admin', 'restaurant_owner']), createProxy(SERVICES.analytics));
-app.use('/api/ai',            authMiddleware(),                    createProxy(SERVICES.ai));
+app.use('/api/payments',      authMiddleware(), paymentLimiter,                              createProxy(SERVICES.payment));
+app.use('/api/delivery',      authMiddleware(),                                               createProxy(SERVICES.delivery));
+app.use('/api/notifications', authMiddleware(),                                               createProxy(SERVICES.notification));
+app.use('/api/reviews',       authMiddleware(),                                               createProxy(SERVICES.review));
+app.use('/api/analytics',     authMiddleware(['admin', 'super_admin', 'restaurant_owner']),  createProxy(SERVICES.analytics));
+app.use('/api/ai',            authMiddleware(),                                               createProxy(SERVICES.ai));
 
 // ============================================================
 // SWAGGER DOCS
