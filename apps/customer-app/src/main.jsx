@@ -10,7 +10,12 @@ import './index.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 1000 * 60 * 5, retry: 2, refetchOnWindowFocus: false },
+    queries: {
+      staleTime: 1000 * 60 * 5,
+      retry: 3,
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000), // 2s, 4s, 8s
+      refetchOnWindowFocus: false,
+    },
   },
 });
 

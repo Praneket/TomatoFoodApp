@@ -108,10 +108,13 @@ const createProxy = (target) =>
   createProxyMiddleware({
     target,
     changeOrigin: true,
+    proxyTimeout: 60000,  // 60s — allows Render free tier cold start (~30s)
+    timeout: 60000,
     on: {
       error: (err, req, res) => {
         logger.error(`Proxy error to ${target}: ${err.message}`);
-        res.status(503).json({ success: false, error: { message: 'Service temporarily unavailable', code: 'SERVICE_UNAVAILABLE' } });
+        if (res.headersSent) return;
+        res.status(503).json({ success: false, error: { message: 'Service temporarily unavailable — please retry in a moment', code: 'SERVICE_UNAVAILABLE' } });
       },
       proxyReq: (proxyReq, req) => {
         if (req.originalUrl) proxyReq.path = req.originalUrl;
