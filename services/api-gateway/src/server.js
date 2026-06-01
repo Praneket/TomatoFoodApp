@@ -103,27 +103,28 @@ app.use(globalLimiter);
 
 // ============================================================
 // PROXY FACTORY
-// prefix = the app.use() mount path, e.g. '/api/catalog'
-// Downstream services mount their own routes at the FULL path,
-// so we must forward the full original URL, not the stripped suffix.
+// http-proxy-middleware v3 removed pathRewrite.
+// We restore the full original URL in the proxyReq handler.
 // ============================================================
-const createProxy = (target, prefix) =>
+const createProxy = (target) =>
   createProxyMiddleware({
     target,
     changeOrigin: true,
     proxyTimeout: 60000,
     timeout: 60000,
-    // Rewrite: restore the full path that was stripped by express app.use()
-    pathRewrite: (path, req) => req.originalUrl.split('?')[0] + (req.originalUrl.includes('?') ? '?' + req.originalUrl.split('?')[1] : ''),
     on: {
       error: (err, req, res) => {
         logger.error(`Proxy error to ${target}: ${err.message}`);
         if (res.headersSent) return;
-        res.status(503).json({ success: false, error: { message: 'Service temporarily unavailable — please retry in a moment', code: 'SERVICE_UNAVAILABLE' } });
+        res.status(503).json({ success: false, error: { message: 'Service temporarily unavailable — please retry', code: 'SERVICE_UNAVAILABLE' } });
       },
       proxyReq: (proxyReq, req) => {
-        proxyReq.setHeader('X-Request-ID', req.id);
-        proxyReq.setHeader('X-Forwarded-For', req.ip);
+        // Restore full path — HPM v3 strips the mount prefix, downstream services need the full path
+        const fullPath = req.originalUrl;
+        proxyReq.path = fullPath;
+
+        proxyReq.setHeader('X-Request-ID', req.id || '');
+        proxyReq.setHeader('X-Forwarded-For', req.ip || '');
         proxyReq.removeHeader('origin');
         if (req.user) {
           proxyReq.setHeader('X-User-ID', req.user.id);
