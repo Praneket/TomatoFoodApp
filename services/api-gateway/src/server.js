@@ -117,7 +117,6 @@ const createProxy = (target) =>
         res.status(503).json({ success: false, error: { message: 'Service temporarily unavailable — please retry in a moment', code: 'SERVICE_UNAVAILABLE' } });
       },
       proxyReq: (proxyReq, req) => {
-        if (req.originalUrl) proxyReq.path = req.originalUrl;
         proxyReq.setHeader('X-Request-ID', req.id);
         proxyReq.setHeader('X-Forwarded-For', req.ip);
         proxyReq.removeHeader('origin');
@@ -125,7 +124,6 @@ const createProxy = (target) =>
           proxyReq.setHeader('X-User-ID', req.user.id);
           proxyReq.setHeader('X-User-Role', req.user.role);
         }
-        // Re-stream the body if express.json already parsed it
         if (req.body && Object.keys(req.body).length > 0) {
           const bodyStr = JSON.stringify(req.body);
           proxyReq.setHeader('Content-Type', 'application/json');

@@ -1,21 +1,30 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { asyncHandler } = require('../middleware/asyncHandler');
-const { upload, uploadToSupabase } = require('../services/uploadService');
 const {
   getPublicRestaurants, getPublicRestaurantById, createRestaurant, getMyRestaurant,
   updateRestaurant, addMenuItem, updateMenuItem, deleteMenuItem, toggleOpen,
   getAllRestaurants, verifyRestaurant,
 } = require('../controllers/restaurantController');
 
+// Upload service is optional — only loads if @supabase/supabase-js is installed
+let upload, uploadToSupabase;
+try {
+  ({ upload, uploadToSupabase } = require('../services/uploadService'));
+} catch (e) {
+  console.warn('[restaurant-service] Upload service unavailable:', e.message);
+}
+
 const router = express.Router();
 
-// Image upload
-router.post('/upload', authMiddleware(['restaurant_owner', 'admin']), upload.single('image'), asyncHandler(async (req, res) => {
-  if (!req.file) return res.status(400).json({ success: false, error: { message: 'No file provided' } });
-  const url = await uploadToSupabase(req.file, 'restaurants');
-  res.json({ success: true, data: { url } });
-}));
+// Image upload (only register if upload service loaded)
+if (upload && uploadToSupabase) {
+  router.post('/upload', authMiddleware(['restaurant_owner', 'admin']), upload.single('image'), asyncHandler(async (req, res) => {
+    if (!req.file) return res.status(400).json({ success: false, error: { message: 'No file provided' } });
+    const url = await uploadToSupabase(req.file, 'restaurants');
+    res.json({ success: true, data: { url } });
+  }));
+}
 
 // Public
 router.get('/public',     asyncHandler(getPublicRestaurants));
