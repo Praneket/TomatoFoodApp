@@ -79,6 +79,9 @@ app.use(morgan('combined', {
 // ============================================================
 // RATE LIMITING
 // ============================================================
+// Trust Render/Nginx reverse proxy so rate-limit reads the real client IP
+app.set('trust proxy', 1);
+
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 500,

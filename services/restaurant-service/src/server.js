@@ -36,7 +36,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => console.log(`Restaurant Service running on port ${PORT}`));
 
 // Connect MongoDB in background
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/tomato_restaurants')
+mongoose.connect(process.env.RESTAURANT_MONGO_URI || process.env.MONGO_URI?.replace(/\/[^\/\?]+(\?|$)/, '/tomato_restaurants$1') || 'mongodb://localhost:27017/tomato_restaurants')
   .then(() => console.log('MongoDB connected (restaurant-service)'))
   .catch((err) => console.error('MongoDB connection failed:', err.message));
 

@@ -21,7 +21,7 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => console.log(`Catalog Service running on port ${PORT}`));
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/tomato_catalog')
+mongoose.connect(process.env.CATALOG_MONGO_URI || process.env.MONGO_URI?.replace(/\/[^\/\?]+(\?|$)/, '/tomato_catalog$1') || 'mongodb://localhost:27017/tomato_catalog')
   .then(() => console.log('MongoDB connected (catalog-service)'))
   .catch((err) => console.error('MongoDB connection failed:', err.message));
 
