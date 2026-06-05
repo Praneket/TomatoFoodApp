@@ -3,7 +3,6 @@ const { getRedis } = require('../services/redisService');
 const CART_TTL = 7 * 24 * 60 * 60; // 7 days
 const TAX_RATE = 0.05;
 
-// Valid coupons (in production, fetch from DB)
 const COUPONS = {
   WELCOME10: { type: 'percent', value: 10, minOrder: 0, maxDiscount: 100 },
   FLAT50:    { type: 'flat',    value: 50, minOrder: 200, maxDiscount: 50 },
@@ -12,6 +11,19 @@ const COUPONS = {
 };
 
 const getCartKey = (userId) => `cart:${userId}`;
+
+// In-memory fallback when Redis is unavailable
+const memStore = new Map();
+const getRedisOrMem = () => {
+  const redis = getRedis();
+  if (redis) return redis;
+  // Return a compatible shim using in-memory Map
+  return {
+    get:   (k)       => Promise.resolve(memStore.get(k) ?? null),
+    setEx: (k, _t, v) => { memStore.set(k, v); return Promise.resolve(); },
+    del:   (k)       => { memStore.delete(k); return Promise.resolve(); },
+  };
+};
 
 const calculateTotals = (items, coupon = null) => {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -39,7 +51,7 @@ const calculateTotals = (items, coupon = null) => {
 
 // GET /api/cart
 const getCart = async (req, res) => {
-  const redis = getRedis();
+  const redis = getRedisOrMem();
   const raw = await redis.get(getCartKey(req.user.id));
   const cart = raw ? JSON.parse(raw) : { items: [], restaurantId: null, couponCode: null };
   const totals = calculateTotals(cart.items, cart.coupon);
@@ -49,7 +61,7 @@ const getCart = async (req, res) => {
 // POST /api/cart/add
 const addToCart = async (req, res) => {
   const { foodId, name, price, image, restaurantId, quantity = 1, customizations = [] } = req.body;
-  const redis = getRedis();
+  const redis = getRedisOrMem();
   const key = getCartKey(req.user.id);
 
   const raw = await redis.get(key);
@@ -81,7 +93,7 @@ const addToCart = async (req, res) => {
 // PATCH /api/cart/update
 const updateCartItem = async (req, res) => {
   const { foodId, quantity, customizations = [] } = req.body;
-  const redis = getRedis();
+  const redis = getRedisOrMem();
   const key = getCartKey(req.user.id);
 
   const raw = await redis.get(key);
@@ -107,7 +119,7 @@ const updateCartItem = async (req, res) => {
 
 // DELETE /api/cart/remove/:foodId
 const removeFromCart = async (req, res) => {
-  const redis = getRedis();
+  const redis = getRedisOrMem();
   const key = getCartKey(req.user.id);
 
   const raw = await redis.get(key);
@@ -124,7 +136,7 @@ const removeFromCart = async (req, res) => {
 
 // DELETE /api/cart/clear
 const clearCart = async (req, res) => {
-  const redis = getRedis();
+  const redis = getRedisOrMem();
   await redis.del(getCartKey(req.user.id));
   res.json({ success: true, message: 'Cart cleared' });
 };
@@ -132,7 +144,7 @@ const clearCart = async (req, res) => {
 // POST /api/cart/coupon
 const applyCoupon = async (req, res) => {
   const { couponCode } = req.body;
-  const redis = getRedis();
+  const redis = getRedisOrMem();
   const key = getCartKey(req.user.id);
 
   const raw = await redis.get(key);
@@ -158,7 +170,7 @@ const applyCoupon = async (req, res) => {
 
 // DELETE /api/cart/coupon
 const removeCoupon = async (req, res) => {
-  const redis = getRedis();
+  const redis = getRedisOrMem();
   const key = getCartKey(req.user.id);
   const raw = await redis.get(key);
   if (!raw) return res.status(404).json({ success: false, error: { message: 'Cart not found' } });

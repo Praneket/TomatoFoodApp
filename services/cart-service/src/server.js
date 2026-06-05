@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT || process.env.CART_SERVICE_PORT || 3005;
 
 app.use(helmet());
-app.use(cors({ origin: process.env.GATEWAY_URL || 'http://localhost:3000' }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
 app.use('/api/cart', cartRoutes);
