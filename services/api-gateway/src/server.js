@@ -55,6 +55,9 @@ app.use(cors({
 
 app.options('*', cors({ origin: true, credentials: true }));
 
+// Trust Render/Nginx reverse proxy — must be set before rate limiters
+app.set('trust proxy', 1);
+
 app.use(compression());
 // Parse body only for auth middleware to read — proxy re-streams it
 app.use((req, res, next) => {
@@ -79,9 +82,6 @@ app.use(morgan('combined', {
 // ============================================================
 // RATE LIMITING
 // ============================================================
-// Trust Render/Nginx reverse proxy so rate-limit reads the real client IP
-app.set('trust proxy', 1);
-
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 500,
@@ -92,7 +92,7 @@ const globalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 50,
   message: { success: false, error: { message: 'Too many auth attempts', code: 'AUTH_RATE_LIMIT' } },
 });
 

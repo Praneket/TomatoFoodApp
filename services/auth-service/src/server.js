@@ -24,6 +24,7 @@ try {
 
   app.use(passport.initialize());
   app.use('/api/auth', authRoutes);
+  app.use('/api/auth', (req, res) => res.status(404).json({ success: false, error: { message: `Auth route not found: ${req.method} ${req.path}` } }));
   app.use(errorHandler);
   logger.info('Auth routes loaded');
 } catch (err) {
