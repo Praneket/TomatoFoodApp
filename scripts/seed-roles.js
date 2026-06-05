@@ -7,8 +7,7 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
 async function seedRoles() {
-  // Dynamically require prisma from auth-service
-  const { PrismaClient } = require('../services/auth-service/node_modules/@prisma/client');
+  const { PrismaClient } = require('@prisma/client');
   const prisma = new PrismaClient({
     datasources: { db: { url: process.env.DATABASE_URL } },
   });

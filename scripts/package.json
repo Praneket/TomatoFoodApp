@@ -4,6 +4,13 @@
   "private": true,
   "dependencies": {
     "dotenv": "^16.4.5",
-    "mongoose": "^8.5.0"
+    "mongoose": "^8.5.0",
+    "@prisma/client": "^5.16.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.16.0"
+  },
+  "prisma": {
+    "schema": "./prisma/schema.prisma"
   }
 }

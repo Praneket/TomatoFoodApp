@@ -26,13 +26,19 @@ jobs:
         with:
           node-version: '20'
 
-      # ── Step 1: Seed MongoDB (restaurants + food catalog) ──────────────
+      # Install dependencies (always — needed by all steps)
       - name: Install script dependencies
-        if: ${{ inputs.step == 'all' || inputs.step == 'mongo-only' }}
         working-directory: scripts
         run: npm install
 
-      - name: Seed MongoDB (restaurants + food items)
+      # Generate Prisma client from scripts/prisma/schema.prisma
+      - name: Generate Prisma client
+        if: ${{ inputs.step == 'all' || inputs.step == 'roles-only' }}
+        working-directory: scripts
+        run: npx prisma generate
+
+      # ── Step 1: Seed MongoDB (restaurants + food catalog) ──────────────
+      - name: Seed MongoDB
         if: ${{ inputs.step == 'all' || inputs.step == 'mongo-only' }}
         working-directory: scripts
         run: node seed.js
@@ -48,11 +54,6 @@ jobs:
           API_URL: ${{ secrets.API_URL }}
 
       # ── Step 3: Set roles in PostgreSQL via Prisma ─────────────────────
-      - name: Install auth-service deps + generate Prisma client
-        if: ${{ inputs.step == 'all' || inputs.step == 'roles-only' }}
-        working-directory: services/auth-service
-        run: npm install && npx prisma generate
-
       - name: Set user roles in PostgreSQL
         if: ${{ inputs.step == 'all' || inputs.step == 'roles-only' }}
         working-directory: scripts
