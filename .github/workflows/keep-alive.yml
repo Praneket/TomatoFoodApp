@@ -9,24 +9,8 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping all services
+      - name: Wake all services via gateway
         run: |
-          services=(
-            "https://tomato-api-gateway.onrender.com/health"
-            "https://tomato-auth-service-2hol.onrender.com/health"
-            "https://tomato-user-service.onrender.com/health"
-            "https://tomato-restaurant-service-hv0e.onrender.com/health"
-            "https://tomato-catalog-service.onrender.com/health"
-            "https://tomato-cart-service.onrender.com/health"
-            "https://tomato-order-service.onrender.com/health"
-            "https://tomato-payment-service.onrender.com/health"
-            "https://tomato-delivery-service.onrender.com/health"
-            "https://tomato-notification-service.onrender.com/health"
-            "https://tomato-review-service.onrender.com/health"
-            "https://tomato-analytics-service.onrender.com/health"
-          )
-
-          for url in "${services[@]}"; do
-            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$url" || echo "000")
-            echo "$status $url"
-          done
+          echo "Pinging /wake endpoint..."
+          curl -s --max-time 30 "https://tomato-api-gateway.onrender.com/wake" | \
+            python3 -c "import sys,json; data=json.load(sys.stdin); [print(f\"{s['status']:8} {s['name']}\") for s in data['services']]"

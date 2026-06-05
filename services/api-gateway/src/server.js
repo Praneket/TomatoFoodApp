@@ -178,6 +178,29 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc, {
 }));
 
 // ============================================================
+// WAKE-UP ENDPOINT — pings all downstream services to prevent cold starts
+// UptimeRobot should hit GET /wake instead of individual service URLs
+// ============================================================
+app.get('/wake', async (req, res) => {
+  const results = await Promise.allSettled(
+    Object.entries(SERVICES).map(async ([name, url]) => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      try {
+        const resp = await fetch(`${url}/health`, { signal: controller.signal });
+        clearTimeout(timeout);
+        return { name, status: resp.ok ? 'up' : 'degraded' };
+      } catch {
+        clearTimeout(timeout);
+        return { name, status: 'waking' };
+      }
+    })
+  );
+  const services = results.map((r) => r.status === 'fulfilled' ? r.value : { name: 'unknown', status: 'error' });
+  res.json({ gateway: 'up', services, timestamp: new Date().toISOString() });
+});
+
+// ============================================================
 // HEALTH CHECK
 // ============================================================
 app.get('/health', async (req, res) => {
