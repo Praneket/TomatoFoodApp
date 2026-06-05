@@ -6,6 +6,7 @@
 
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const mongoose = require('./node_modules/mongoose');
+const { createClient } = require('./node_modules/redis');
 
 const BASE_URI = process.env.MONGO_URI || 'mongodb://root:rootpassword@localhost:27017/tomato?authSource=admin';
 // Build per-db URIs by replacing the db name portion
@@ -146,18 +147,18 @@ const RESTAURANTS = [
 ];
 
 const FOOD_ITEMS = [
-  { name: 'Butter Chicken', description: 'Creamy tomato-based chicken curry', price: 320, category: 'Main Course', isVeg: false, isPopular: true, isTrending: true, rating: 4.6, totalOrders: 2500, calories: 450, preparationTime: 20, tags: ['spicy', 'creamy', 'chicken'] },
-  { name: 'Paneer Tikka', description: 'Grilled cottage cheese with spices', price: 280, category: 'Starters', isVeg: true, isPopular: true, isTrending: true, rating: 4.5, totalOrders: 2100, calories: 380, preparationTime: 15, tags: ['veg', 'grilled', 'starter'] },
-  { name: 'Chicken Biryani', description: 'Fragrant basmati rice with tender chicken', price: 350, category: 'Rice', isVeg: false, isPopular: true, isTrending: true, rating: 4.7, totalOrders: 3200, calories: 620, preparationTime: 30, tags: ['rice', 'chicken', 'aromatic'] },
-  { name: 'Margherita Pizza', description: 'Classic tomato, mozzarella, basil', price: 299, category: 'Pizza', isVeg: true, isPopular: true, isTrending: false, rating: 4.4, totalOrders: 1800, calories: 520, preparationTime: 20, tags: ['pizza', 'veg', 'classic'] },
-  { name: 'Pepperoni Pizza', description: 'Loaded with pepperoni and cheese', price: 399, category: 'Pizza', isVeg: false, isPopular: true, isTrending: true, rating: 4.5, totalOrders: 2200, calories: 680, preparationTime: 20, tags: ['pizza', 'non-veg', 'cheesy'] },
-  { name: 'Classic Burger', description: 'Juicy beef patty with fresh veggies', price: 249, category: 'Burgers', isVeg: false, isPopular: true, isTrending: false, rating: 4.3, totalOrders: 1600, calories: 540, preparationTime: 15, tags: ['burger', 'beef', 'fast-food'] },
-  { name: 'Veggie Burger', description: 'Crispy veggie patty with coleslaw', price: 199, category: 'Burgers', isVeg: true, isPopular: false, isTrending: false, rating: 4.1, totalOrders: 900, calories: 420, preparationTime: 12, tags: ['burger', 'veg', 'healthy'] },
-  { name: 'Salmon Sushi Roll', description: 'Fresh salmon with avocado', price: 450, category: 'Sushi', isVeg: false, isPopular: true, isTrending: true, rating: 4.8, totalOrders: 1200, calories: 320, preparationTime: 15, tags: ['sushi', 'japanese', 'premium'] },
-  { name: 'Chocolate Lava Cake', description: 'Warm chocolate cake with molten center', price: 180, category: 'Desserts', isVeg: true, isPopular: true, isTrending: true, rating: 4.9, totalOrders: 2800, calories: 480, preparationTime: 15, tags: ['dessert', 'chocolate', 'sweet'] },
-  { name: 'Masala Chai', description: 'Spiced Indian tea with milk', price: 60, category: 'Beverages', isVeg: true, isPopular: true, isTrending: false, rating: 4.6, totalOrders: 4500, calories: 120, preparationTime: 5, tags: ['beverage', 'tea', 'indian'] },
-  { name: 'Mango Lassi', description: 'Refreshing yogurt-based mango drink', price: 120, category: 'Beverages', isVeg: true, isPopular: true, isTrending: true, rating: 4.7, totalOrders: 3100, calories: 220, preparationTime: 5, tags: ['beverage', 'mango', 'refreshing'] },
-  { name: 'Pad Thai', description: 'Stir-fried rice noodles with peanuts', price: 320, category: 'Noodles', isVeg: false, isPopular: false, isTrending: true, rating: 4.4, totalOrders: 800, calories: 560, preparationTime: 20, tags: ['thai', 'noodles', 'asian'] },
+  { name: 'Butter Chicken', description: 'Creamy tomato-based chicken curry', price: 320, category: 'Main Course', isVeg: false, isPopular: true, isTrending: true, rating: 4.6, totalOrders: 2500, calories: 450, preparationTime: 20, tags: ['spicy', 'creamy', 'chicken'], image: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400' },
+  { name: 'Paneer Tikka', description: 'Grilled cottage cheese with spices', price: 280, category: 'Starters', isVeg: true, isPopular: true, isTrending: true, rating: 4.5, totalOrders: 2100, calories: 380, preparationTime: 15, tags: ['veg', 'grilled', 'starter'], image: 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=400' },
+  { name: 'Chicken Biryani', description: 'Fragrant basmati rice with tender chicken', price: 350, category: 'Rice', isVeg: false, isPopular: true, isTrending: true, rating: 4.7, totalOrders: 3200, calories: 620, preparationTime: 30, tags: ['rice', 'chicken', 'aromatic'], image: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=400' },
+  { name: 'Margherita Pizza', description: 'Classic tomato, mozzarella, basil', price: 299, category: 'Pizza', isVeg: true, isPopular: true, isTrending: false, rating: 4.4, totalOrders: 1800, calories: 520, preparationTime: 20, tags: ['pizza', 'veg', 'classic'], image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400' },
+  { name: 'Pepperoni Pizza', description: 'Loaded with pepperoni and cheese', price: 399, category: 'Pizza', isVeg: false, isPopular: true, isTrending: true, rating: 4.5, totalOrders: 2200, calories: 680, preparationTime: 20, tags: ['pizza', 'non-veg', 'cheesy'], image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400' },
+  { name: 'Classic Burger', description: 'Juicy beef patty with fresh veggies', price: 249, category: 'Burgers', isVeg: false, isPopular: true, isTrending: false, rating: 4.3, totalOrders: 1600, calories: 540, preparationTime: 15, tags: ['burger', 'beef', 'fast-food'], image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400' },
+  { name: 'Veggie Burger', description: 'Crispy veggie patty with coleslaw', price: 199, category: 'Burgers', isVeg: true, isPopular: false, isTrending: false, rating: 4.1, totalOrders: 900, calories: 420, preparationTime: 12, tags: ['burger', 'veg', 'healthy'], image: 'https://images.unsplash.com/photo-1520072959219-c595dc870360?w=400' },
+  { name: 'Salmon Sushi Roll', description: 'Fresh salmon with avocado', price: 450, category: 'Sushi', isVeg: false, isPopular: true, isTrending: true, rating: 4.8, totalOrders: 1200, calories: 320, preparationTime: 15, tags: ['sushi', 'japanese', 'premium'], image: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=400' },
+  { name: 'Chocolate Lava Cake', description: 'Warm chocolate cake with molten center', price: 180, category: 'Desserts', isVeg: true, isPopular: true, isTrending: true, rating: 4.9, totalOrders: 2800, calories: 480, preparationTime: 15, tags: ['dessert', 'chocolate', 'sweet'], image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=400' },
+  { name: 'Masala Chai', description: 'Spiced Indian tea with milk', price: 60, category: 'Beverages', isVeg: true, isPopular: true, isTrending: false, rating: 4.6, totalOrders: 4500, calories: 120, preparationTime: 5, tags: ['beverage', 'tea', 'indian'], image: 'https://images.unsplash.com/photo-1561336313-0bd5e0b27ec8?w=400' },
+  { name: 'Mango Lassi', description: 'Refreshing yogurt-based mango drink', price: 120, category: 'Beverages', isVeg: true, isPopular: true, isTrending: true, rating: 4.7, totalOrders: 3100, calories: 220, preparationTime: 5, tags: ['beverage', 'mango', 'refreshing'], image: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400' },
+  { name: 'Pad Thai', description: 'Stir-fried rice noodles with peanuts', price: 320, category: 'Noodles', isVeg: false, isPopular: false, isTrending: true, rating: 4.4, totalOrders: 800, calories: 560, preparationTime: 20, tags: ['thai', 'noodles', 'asian'], image: 'https://images.unsplash.com/photo-1559314809-0d155014e29e?w=400' },
 ];
 
 async function seed() {
@@ -181,6 +182,22 @@ async function seed() {
     await restaurantConn.close();
 
     console.log('\n🎉 Database seeded successfully!');
+
+    // Bust Redis cache so services serve fresh data immediately
+    if (process.env.REDIS_URL) {
+      try {
+        const redis = createClient({ url: process.env.REDIS_URL });
+        await redis.connect();
+        const keys = await redis.keys('restaurants:*');
+        const catalogKeys = await redis.keys('catalog:*');
+        const allKeys = [...keys, ...catalogKeys];
+        if (allKeys.length) await redis.del(allKeys);
+        console.log(`\n🗑️  Cleared ${allKeys.length} Redis cache keys`);
+        await redis.disconnect();
+      } catch (e) {
+        console.log('⚠️  Redis cache clear skipped:', e.message);
+      }
+    }
     console.log('\n📋 Test Credentials:');
     console.log('   Customer: customer@tomato.com / Password123!');
     console.log('   Admin:    admin@tomato.com / Admin123!');
