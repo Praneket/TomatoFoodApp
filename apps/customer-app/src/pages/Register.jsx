@@ -37,7 +37,8 @@ export default function Register() {
       toast.success('Account created! Please verify your email. 📧');
       navigate('/login');
     } catch (err) {
-      toast.error(err.response?.data?.error?.message || 'Registration failed');
+      const detail = err.response?.data?.error?.details?.[0]?.msg;
+      toast.error(detail || err.response?.data?.error?.message || 'Registration failed');
     } finally { setLoading(false); }
   };
 
