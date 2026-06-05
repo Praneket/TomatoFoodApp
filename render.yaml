@@ -15,7 +15,7 @@ services:
       - key: JWT_REFRESH_SECRET
         sync: false
       - key: AUTH_SERVICE_URL
-        value: https://tomato-auth-service.onrender.com
+        value: https://tomato-auth-service-2hol.onrender.com
       - key: USER_SERVICE_URL
         value: https://tomato-user-service.onrender.com
       - key: RESTAURANT_SERVICE_URL

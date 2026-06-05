@@ -59,12 +59,13 @@ app.options('*', cors({ origin: true, credentials: true }));
 app.set('trust proxy', 1);
 
 app.use(compression());
-// Parse body only for auth middleware to read — proxy re-streams it
+// Only parse body for the health/docs routes the gateway handles itself.
+// Proxied routes must NOT have their stream consumed — HPM streams the raw body.
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api/payments/webhook')) return next();
+  const proxied = req.path.startsWith('/api/');
+  if (proxied) return next();
   express.json({ limit: '10mb' })(req, res, next);
 });
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ============================================================
 // REQUEST ID & LOGGING
@@ -122,9 +123,8 @@ const createProxy = (target) =>
         res.status(503).json({ success: false, error: { message: 'Service temporarily unavailable — please retry', code: 'SERVICE_UNAVAILABLE' } });
       },
       proxyReq: (proxyReq, req) => {
-        // Restore full path — HPM v3 strips the mount prefix, downstream services need the full path
-        const fullPath = req.originalUrl;
-        proxyReq.path = fullPath;
+        // Restore full path — HPM v3 strips the mount prefix
+        proxyReq.path = req.originalUrl;
 
         proxyReq.setHeader('X-Request-ID', req.id || '');
         proxyReq.setHeader('X-Forwarded-For', req.ip || '');
@@ -133,12 +133,7 @@ const createProxy = (target) =>
           proxyReq.setHeader('X-User-ID', req.user.id);
           proxyReq.setHeader('X-User-Role', req.user.role);
         }
-        if (req.body && Object.keys(req.body).length > 0) {
-          const bodyStr = JSON.stringify(req.body);
-          proxyReq.setHeader('Content-Type', 'application/json');
-          proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyStr));
-          proxyReq.write(bodyStr);
-        }
+        // Body is NOT parsed — raw stream passes through untouched
       },
       proxyRes: (proxyRes) => {
         delete proxyRes.headers['access-control-allow-origin'];
