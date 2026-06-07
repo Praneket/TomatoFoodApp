@@ -166,7 +166,7 @@ app.use('/api/delivery',      authMiddleware(),                                 
 app.use('/api/notifications', authMiddleware(),                                               createProxy(SERVICES.notification));
 app.use('/api/reviews',       authMiddleware(),                                               createProxy(SERVICES.review));
 app.use('/api/analytics',     authMiddleware(['admin', 'super_admin', 'restaurant_owner']),  createProxy(SERVICES.analytics));
-app.use('/api/ai',            authMiddleware(),                                               createProxy(SERVICES.ai));
+app.use('/api/ai',            authMiddleware(),                                               createProxy(process.env.AI_SERVICE_URL || 'http://localhost:8000'));
 
 // ============================================================
 // SWAGGER DOCS
