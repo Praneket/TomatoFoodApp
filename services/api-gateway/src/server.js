@@ -178,26 +178,22 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc, {
 }));
 
 // ============================================================
-// WAKE-UP ENDPOINT — pings all downstream services to prevent cold starts
-// UptimeRobot should hit GET /wake instead of individual service URLs
+// WAKE-UP ENDPOINT — fire-and-forget pings to all downstream services
+// Returns immediately so UptimeRobot always sees 200
+// Services wake up in the background (Render free tier takes 20-40s)
 // ============================================================
-app.get('/wake', async (req, res) => {
-  const results = await Promise.allSettled(
-    Object.entries(SERVICES).map(async ([name, url]) => {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
-      try {
-        const resp = await fetch(`${url}/health`, { signal: controller.signal });
-        clearTimeout(timeout);
-        return { name, status: resp.ok ? 'up' : 'degraded' };
-      } catch {
-        clearTimeout(timeout);
-        return { name, status: 'waking' };
-      }
-    })
-  );
-  const services = results.map((r) => r.status === 'fulfilled' ? r.value : { name: 'unknown', status: 'error' });
-  res.json({ gateway: 'up', services, timestamp: new Date().toISOString() });
+app.get('/wake', (req, res) => {
+  // Respond immediately — don't wait for cold-starting services
+  res.json({ gateway: 'up', message: 'wake signals sent', services: Object.keys(SERVICES), timestamp: new Date().toISOString() });
+
+  // Fire pings in background after responding
+  Object.entries(SERVICES).forEach(([name, url]) => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000); // 45s — full cold start budget
+    fetch(`${url}/health`, { signal: controller.signal })
+      .then(() => { clearTimeout(timeout); logger.info(`Wake: ${name} is up`); })
+      .catch(() => { clearTimeout(timeout); logger.info(`Wake: ${name} cold starting`); });
+  });
 });
 
 // ============================================================
