@@ -2,15 +2,33 @@ name: Keep Services Alive
 
 on:
   schedule:
-    - cron: '*/14 * * * *'  # every 14 minutes
+    - cron: '*/14 * * * *'
   workflow_dispatch:
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Wake all services via gateway
+      - name: Ping all Render services
         run: |
-          echo "Pinging /wake endpoint..."
-          curl -s --max-time 30 "https://tomato-api-gateway.onrender.com/wake" | \
-            python3 -c "import sys,json; data=json.load(sys.stdin); [print(f\"{s['status']:8} {s['name']}\") for s in data['services']]"
+          ping() {
+            local name=$1
+            local url=$2
+            local status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 45 "$url/health" || echo "000")
+            echo "$status  $name  ($url)"
+          }
+
+          ping "api-gateway"           "https://tomato-api-gateway.onrender.com"
+          ping "auth-service"          "https://tomato-auth-service-2hol.onrender.com"
+          ping "user-service"          "https://tomato-user-service.onrender.com"
+          ping "restaurant-service"    "https://tomato-restaurant-service-hv0e.onrender.com"
+          ping "catalog-service"       "https://tomato-catalog-service.onrender.com"
+          ping "cart-service"          "https://tomato-cart-service.onrender.com"
+          ping "order-service"         "https://tomato-order-service.onrender.com"
+          ping "payment-service"       "https://tomato-payment-service.onrender.com"
+          ping "delivery-service"      "https://tomato-delivery-service.onrender.com"
+          ping "notification-service"  "https://tomato-notification-service.onrender.com"
+          ping "review-service"        "https://tomato-review-service.onrender.com"
+          ping "analytics-service"     "https://tomato-analytics-service.onrender.com"
+
+          echo "Done — all services pinged"

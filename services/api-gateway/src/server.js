@@ -33,7 +33,6 @@ const SERVICES = {
   notification: process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3009',
   review:       process.env.REVIEW_SERVICE_URL       || 'http://localhost:3010',
   analytics:    process.env.ANALYTICS_SERVICE_URL    || 'http://localhost:3011',
-  ai:           process.env.AI_SERVICE_URL           || 'http://localhost:8000',
 };
 
 // ============================================================
